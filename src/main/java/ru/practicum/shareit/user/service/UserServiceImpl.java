@@ -32,6 +32,8 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserDto update(Long userId, UserDto userDto) {
+        checkUserExists(userId);
+
         if (userDto.getEmail() != null) {
             validateUser(userDto);
 
@@ -39,6 +41,7 @@ public class UserServiceImpl implements UserService {
                 throw new ConflictException("Пользователь с таким email уже существует");
             }
         }
+
         User user = UserMapper.toUser(userDto);
         return UserMapper.toUserDto(userStorage.update(userId, user));
     }
@@ -58,6 +61,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void delete(Long userId) {
+        checkUserExists(userId);
         userStorage.delete(userId);
     }
 
@@ -65,5 +69,9 @@ public class UserServiceImpl implements UserService {
         if (userDto.getEmail() == null || userDto.getEmail().isBlank() || !userDto.getEmail().contains("@")) {
             throw new ValidationException("Некорректный email");
         }
+    }
+
+    private void checkUserExists(Long userId) {
+        userStorage.getById(userId);
     }
 }

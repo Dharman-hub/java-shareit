@@ -25,11 +25,11 @@ public class InMemoryItemStorage implements ItemStorage {
     public Item update(Long itemId, Item item) {
         Item oldItem = getById(itemId);
 
-        if (item.getName() != null) {
+        if (item.getName() != null && !item.getName().isBlank()) {
             oldItem.setName(item.getName());
         }
 
-        if (item.getDescription() != null) {
+        if (item.getDescription() != null && !item.getDescription().isBlank()) {
             oldItem.setDescription(item.getDescription());
         }
 

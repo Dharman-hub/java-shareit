@@ -31,4 +31,10 @@ public class ErrorHandler {
     public ErrorResponse handleConflictException(ConflictException exception) {
         return new ErrorResponse(exception.getMessage());
     }
+
+    @ExceptionHandler(Exception.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public ErrorResponse handleException(Exception exception) {
+        return new ErrorResponse("Произошла непредвиденная ошибка");
+    }
 }
