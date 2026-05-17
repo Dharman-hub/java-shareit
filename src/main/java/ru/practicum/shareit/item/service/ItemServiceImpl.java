@@ -21,7 +21,10 @@ import ru.practicum.shareit.user.model.User;
 import ru.practicum.shareit.user.repository.UserRepository;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class ItemServiceImpl implements ItemService {
@@ -101,11 +104,39 @@ public class ItemServiceImpl implements ItemService {
 
     @Override
     public List<ItemDto> getByOwnerId(Long userId) {
-        checkUserExists(userId);
+        userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException("Пользователь с id=" + userId + " не найден"));
 
-        return itemRepository.findByOwner(userId)
-                .stream()
-                .map(this::toItemDtoWithBookings)
+        List<Item> items = itemRepository.findByOwner(userId);
+
+        if (items.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<Long> itemIds = items.stream()
+                .map(Item::getId)
+                .toList();
+
+        List<Booking> bookings = bookingRepository
+                .findByItem_IdInAndStatusOrderByStartAsc(itemIds, BookingStatus.APPROVED);
+
+        Map<Long, List<Booking>> bookingsByItemId = bookings.stream()
+                .collect(Collectors.groupingBy(booking -> booking.getItem().getId()));
+
+        List<Comment> comments = commentRepository.findByItemIdInOrderByCreatedDesc(itemIds);
+
+        Map<Long, List<CommentDto>> commentsByItemId = comments.stream()
+                .collect(Collectors.groupingBy(
+                        Comment::getItemId,
+                        Collectors.mapping(CommentMapper::toCommentDto, Collectors.toList())
+                ));
+
+        return items.stream()
+                .map(item -> toItemDtoWithBookingsAndComments(
+                        item,
+                        bookingsByItemId.getOrDefault(item.getId(), Collections.emptyList()),
+                        commentsByItemId.getOrDefault(item.getId(), Collections.emptyList())
+                ))
                 .toList();
     }
 
@@ -145,7 +176,8 @@ public class ItemServiceImpl implements ItemService {
 
     private Item getItemOrThrow(Long itemId) {
         return itemRepository.findById(itemId)
-                .orElseThrow(() -> new NotFoundException("Вещь не найдена"));
+                .orElseThrow(() ->
+                        new NotFoundException("Вещь с id=" + itemId + " не найдена"));
     }
 
     private ItemDto toItemDtoWithBookings(Item item) {
@@ -153,14 +185,14 @@ public class ItemServiceImpl implements ItemService {
 
         LocalDateTime now = LocalDateTime.now();
 
-        bookingRepository.findFirstByItemIdAndEndBeforeAndStatusOrderByEndDesc(
+        bookingRepository.findFirstByItem_IdAndEndBeforeAndStatusOrderByEndDesc(
                         item.getId(),
                         now,
                         BookingStatus.APPROVED
                 )
                 .ifPresent(booking -> itemDto.setLastBooking(toBookingShortDto(booking)));
 
-        bookingRepository.findFirstByItemIdAndStartAfterAndStatusOrderByStartAsc(
+        bookingRepository.findFirstByItem_IdAndStartAfterAndStatusOrderByStartAsc(
                         item.getId(),
                         now,
                         BookingStatus.APPROVED
@@ -176,7 +208,7 @@ public class ItemServiceImpl implements ItemService {
         BookingShortDto dto = new BookingShortDto();
 
         dto.setId(booking.getId());
-        dto.setBookerId(booking.getBookerId());
+        dto.setBookerId(booking.getBooker().getId());
         dto.setStart(booking.getStart());
         dto.setEnd(booking.getEnd());
 
@@ -186,7 +218,7 @@ public class ItemServiceImpl implements ItemService {
     @Override
     public CommentDto addComment(Long userId, Long itemId, NewCommentDto commentDto) {
         User author = userRepository.findById(userId)
-                .orElseThrow(() -> new NotFoundException("Пользователь не найден"));
+                .orElseThrow(() -> new NotFoundException("Пользователь с id=" + userId + " не найден"));
 
         getItemOrThrow(itemId);
 
@@ -194,7 +226,7 @@ public class ItemServiceImpl implements ItemService {
             throw new ValidationException("Комментарий не может быть пустым");
         }
 
-        boolean hasCompletedBooking = bookingRepository.existsByItemIdAndBookerIdAndStatusAndEndBefore(
+        boolean hasCompletedBooking = bookingRepository.existsByItem_IdAndBooker_IdAndStatusAndEndBefore(
                 itemId,
                 userId,
                 BookingStatus.APPROVED,
@@ -216,10 +248,34 @@ public class ItemServiceImpl implements ItemService {
                 .stream()
                 .map(comment -> {
                     User author = userRepository.findById(comment.getAuthorId())
-                            .orElseThrow(() -> new NotFoundException("Пользователь не найден"));
+                            .orElseThrow(() -> new NotFoundException(
+                                    "Пользователь с id=" + comment.getAuthorId() + " не найден"
+                            ));
 
                     return CommentMapper.toCommentDto(comment, author);
                 })
                 .toList();
+    }
+
+    private ItemDto toItemDtoWithBookingsAndComments(Item item,
+                                                     List<Booking> bookings,
+                                                     List<CommentDto> comments) {
+        ItemDto dto = ItemMapper.toItemDto(item);
+
+        LocalDateTime now = LocalDateTime.now();
+
+        bookings.stream()
+                .filter(booking -> booking.getEnd().isBefore(now))
+                .reduce((first, second) -> second)
+                .ifPresent(booking -> dto.setLastBooking(toBookingShortDto(booking)));
+
+        bookings.stream()
+                .filter(booking -> booking.getStart().isAfter(now))
+                .findFirst()
+                .ifPresent(booking -> dto.setNextBooking(toBookingShortDto(booking)));
+
+        dto.setComments(comments);
+
+        return dto;
     }
 }
