@@ -36,7 +36,6 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     public BookingDto create(Long userId, NewBookingDto bookingDto) {
-        validateDates(bookingDto.getStart(), bookingDto.getEnd());
 
         User booker = getUserOrThrow(userId);
         Item item = getItemOrThrow(bookingDto.getItemId());
@@ -187,25 +186,5 @@ public class BookingServiceImpl implements BookingService {
 
     private void checkUserExists(Long userId) {
         getUserOrThrow(userId);
-    }
-
-    private void validateDates(LocalDateTime start, LocalDateTime end) {
-        LocalDateTime now = LocalDateTime.now();
-
-        if (start == null || end == null) {
-            throw new ValidationException("Дата начала и окончания бронирования обязательны");
-        }
-
-        if (start.isBefore(now)) {
-            throw new ValidationException("Дата начала бронирования должна быть в будущем или настоящем");
-        }
-
-        if (!end.isAfter(now)) {
-            throw new ValidationException("Дата окончания бронирования должна быть в будущем");
-        }
-
-        if (!end.isAfter(start)) {
-            throw new ValidationException("Дата окончания бронирования должна быть позже даты начала");
-        }
     }
 }

@@ -156,10 +156,6 @@ public class ItemServiceImpl implements ItemService {
     public List<ItemDto> search(Long userId, String text) {
         checkUserExists(userId);
 
-        if (text == null || text.isBlank()) {
-            return List.of();
-        }
-
         return itemRepository.searchAvailableItems(text)
                 .stream()
                 .map(ItemMapper::toItemDto)

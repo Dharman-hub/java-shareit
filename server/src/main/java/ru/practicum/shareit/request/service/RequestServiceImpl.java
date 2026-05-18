@@ -14,6 +14,8 @@ import ru.practicum.shareit.user.model.User;
 import ru.practicum.shareit.user.repository.UserRepository;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class RequestServiceImpl implements RequestService {
@@ -47,11 +49,20 @@ public class RequestServiceImpl implements RequestService {
     public List<ItemRequestDto> getUserRequests(Long userId) {
         getUserOrThrow(userId);
 
-        return requestRepository.findByRequestor_IdOrderByCreatedDesc(userId)
+        List<ItemRequest> requests = requestRepository.findByRequestor_IdOrderByCreatedDesc(userId);
+
+        List<Long> requestIds = requests.stream()
+                .map(ItemRequest::getId)
+                .toList();
+
+        Map<Long, List<Item>> itemsByRequestId = itemRepository.findByRequestIdIn(requestIds)
                 .stream()
+                .collect(Collectors.groupingBy(Item::getRequestId));
+
+        return requests.stream()
                 .map(request -> RequestMapper.toItemRequestDto(
                         request,
-                        itemRepository.findByRequestId(request.getId())
+                        itemsByRequestId.getOrDefault(request.getId(), List.of())
                 ))
                 .toList();
     }
@@ -60,11 +71,20 @@ public class RequestServiceImpl implements RequestService {
     public List<ItemRequestDto> getAllRequests(Long userId) {
         getUserOrThrow(userId);
 
-        return requestRepository.findByRequestor_IdNotOrderByCreatedDesc(userId)
+        List<ItemRequest> requests = requestRepository.findByRequestor_IdNotOrderByCreatedDesc(userId);
+
+        List<Long> requestIds = requests.stream()
+                .map(ItemRequest::getId)
+                .toList();
+
+        Map<Long, List<Item>> itemsByRequestId = itemRepository.findByRequestIdIn(requestIds)
                 .stream()
+                .collect(Collectors.groupingBy(Item::getRequestId));
+
+        return requests.stream()
                 .map(request -> RequestMapper.toItemRequestDto(
                         request,
-                        itemRepository.findByRequestId(request.getId())
+                        itemsByRequestId.getOrDefault(request.getId(), List.of())
                 ))
                 .toList();
     }

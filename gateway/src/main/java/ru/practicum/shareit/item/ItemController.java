@@ -1,11 +1,16 @@
 package ru.practicum.shareit.item;
 
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import ru.practicum.shareit.exception.ValidationException;
 import ru.practicum.shareit.item.dto.ItemDto;
 import ru.practicum.shareit.item.dto.NewCommentDto;
 
+import java.util.List;
+
 @RestController
+@Slf4j
 @RequestMapping("/items")
 public class ItemController {
     private static final String USER_ID_HEADER = "X-Sharer-User-Id";
@@ -45,8 +50,14 @@ public class ItemController {
     }
 
     @GetMapping("/search")
-    public Object search(@RequestHeader(USER_ID_HEADER) Long userId,
+    public Object search(@RequestHeader("X-Sharer-User-Id") long userId,
                          @RequestParam String text) {
+        log.info("Search items, userId={}, text={}", userId, text);
+
+        if (text == null || text.isBlank()) {
+            return List.of();
+        }
+
         return itemClient.search(userId, text);
     }
 

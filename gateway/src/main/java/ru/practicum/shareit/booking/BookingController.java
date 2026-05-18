@@ -33,12 +33,17 @@ public class BookingController {
 		return bookingClient.getBookings(userId, state, from, size);
 	}
 
-	@PostMapping
-	public ResponseEntity<Object> bookItem(@RequestHeader("X-Sharer-User-Id") long userId,
-			@RequestBody @Valid BookItemRequestDto requestDto) {
-		log.info("Creating booking {}, userId={}", requestDto, userId);
-		return bookingClient.bookItem(userId, requestDto);
-	}
+    @PostMapping
+    public ResponseEntity<Object> bookItem(@RequestHeader("X-Sharer-User-Id") long userId,
+                                           @RequestBody @Valid BookItemRequestDto requestDto) {
+        log.info("Creating booking {}, userId={}", requestDto, userId);
+
+        if (!requestDto.getStart().isBefore(requestDto.getEnd())) {
+            throw new IllegalArgumentException("Дата начала бронирования должна быть раньше даты окончания");
+        }
+
+        return bookingClient.bookItem(userId, requestDto);
+    }
 
 	@GetMapping("/{bookingId}")
 	public ResponseEntity<Object> getBooking(@RequestHeader("X-Sharer-User-Id") long userId,
