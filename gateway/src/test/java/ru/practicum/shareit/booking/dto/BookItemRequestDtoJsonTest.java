@@ -17,13 +17,11 @@ class BookItemRequestDtoJsonTest {
 
     @Test
     void shouldDeserializeBookItemRequestDto() throws Exception {
-        String content = """
-                {
-                  "itemId": 1,
-                  "start": "2026-06-01T10:00:00",
-                  "end": "2026-06-02T10:00:00"
-                }
-                """;
+        String content = "{"
+                + "\"itemId\":1,"
+                + "\"start\":\"2026-06-01T10:00:00\","
+                + "\"end\":\"2026-06-02T10:00:00\""
+                + "}";
 
         BookItemRequestDto dto = json.parseObject(content);
 

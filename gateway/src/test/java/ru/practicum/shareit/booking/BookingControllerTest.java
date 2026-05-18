@@ -25,13 +25,11 @@ class BookingControllerTest {
 
     @Test
     void bookItem_whenStartIsInPast_thenBadRequest() throws Exception {
-        String json = """
-                {
-                  "itemId": 1,
-                  "start": "2020-01-01T10:00:00",
-                  "end": "2020-01-02T10:00:00"
-                }
-                """;
+        String json = "{"
+                + "\"itemId\":1,"
+                + "\"start\":\"2020-01-01T10:00:00\","
+                + "\"end\":\"2020-01-02T10:00:00\""
+                + "}";
 
         mockMvc.perform(post("/bookings")
                         .header("X-Sharer-User-Id", 1L)
