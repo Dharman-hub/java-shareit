@@ -17,6 +17,7 @@ import ru.practicum.shareit.item.model.Comment;
 import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.item.repository.CommentRepository;
 import ru.practicum.shareit.item.repository.ItemRepository;
+import ru.practicum.shareit.request.repository.RequestRepository;
 import ru.practicum.shareit.user.model.User;
 import ru.practicum.shareit.user.repository.UserRepository;
 
@@ -32,15 +33,18 @@ public class ItemServiceImpl implements ItemService {
     private final UserRepository userRepository;
     private final BookingRepository bookingRepository;
     private final CommentRepository commentRepository;
+    private final RequestRepository requestRepository;
 
     public ItemServiceImpl(ItemRepository itemRepository,
                            UserRepository userRepository,
                            BookingRepository bookingRepository,
-                           CommentRepository commentRepository) {
+                           CommentRepository commentRepository,
+                           RequestRepository requestRepository) {
         this.itemRepository = itemRepository;
         this.userRepository = userRepository;
         this.bookingRepository = bookingRepository;
         this.commentRepository = commentRepository;
+        this.requestRepository = requestRepository;
     }
 
     @Override
@@ -48,7 +52,15 @@ public class ItemServiceImpl implements ItemService {
         validateItem(itemDto);
         checkUserExists(userId);
 
+        if (itemDto.getRequestId() != null &&
+                !requestRepository.existsById(itemDto.getRequestId())) {
+            throw new NotFoundException(
+                    "Запрос с id=" + itemDto.getRequestId() + " не найден"
+            );
+        }
+
         Item item = ItemMapper.toItem(itemDto, userId);
+
         return ItemMapper.toItemDto(itemRepository.save(item));
     }
 
